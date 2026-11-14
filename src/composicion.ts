@@ -24,7 +24,7 @@ export function crearApp(persistencia: Persistencia) {
   const eventos = new EventBusMemoria();
   const agendar = new AgendarCita(agendas, eventos, new GeneradorIdUuid());
   const cancelar = new CancelarCita(agendas, eventos);
-  const controller = new ControllerCitas(agendar);
+  const controller = new ControllerCitas(agendar, cancelar);
 
   return { controller, agendas, eventos, agendar, cancelar };
 }
