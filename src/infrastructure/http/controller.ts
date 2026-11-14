@@ -1,5 +1,11 @@
 import { AgendarCita } from "../../application/agendar-cita";
-import { CruceDeHorarioError, RangoInvalidoError } from "../../domain/errores";
+import { CancelarCita } from "../../application/cancelar-cita";
+import {
+  CitaNoEncontradaError,
+  CitaYaCanceladaError,
+  CruceDeHorarioError,
+  RangoInvalidoError,
+} from "../../domain/errores";
 
 export interface EntradaPost {
   medicoId?: unknown;
@@ -19,7 +25,10 @@ export interface Respuesta {
  * Solo conoce casos de uso y errores del dominio, nunca adaptadores.
  */
 export class ControllerCitas {
-  constructor(private readonly agendarCita: AgendarCita) {}
+  constructor(
+    private readonly agendarCita: AgendarCita,
+    private readonly cancelarCita: CancelarCita,
+  ) {}
 
   async post(entrada: EntradaPost): Promise<Respuesta> {
     const medicoId = typeof entrada.medicoId === "string" ? entrada.medicoId : undefined;
@@ -42,6 +51,22 @@ export class ControllerCitas {
     } catch (error) {
       if (error instanceof CruceDeHorarioError) return { status: 409 };
       if (error instanceof RangoInvalidoError) return { status: 400 };
+      throw error;
+    }
+  }
+
+  /** Cancela una cita: 200 ok · 404 no existe · 409 ya cancelada · 400 incompleto. */
+  async delete(entrada: { medicoId?: unknown; citaId?: unknown }): Promise<Respuesta> {
+    const medicoId = typeof entrada.medicoId === "string" ? entrada.medicoId : undefined;
+    const citaId = typeof entrada.citaId === "string" ? entrada.citaId : undefined;
+    if (medicoId === undefined || citaId === undefined) return { status: 400 };
+
+    try {
+      await this.cancelarCita.ejecutar({ medicoId, citaId });
+      return { status: 200 };
+    } catch (error) {
+      if (error instanceof CitaNoEncontradaError) return { status: 404 };
+      if (error instanceof CitaYaCanceladaError) return { status: 409 };
       throw error;
     }
   }
